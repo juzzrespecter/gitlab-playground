@@ -45,14 +45,13 @@ services:
     volumes:
       - ./docs:/srv/www
     networks:
-      - gl-network:
+      gl-network:
     ports:
       - 127.0.0.1:8080:8080
   cypress:
     depends_on:
-      - gl
-      - gl_runner-1
-      - gl_runner-2
+      - gl-runner
+      - gl-runner-2
     build:
       context: ./cypress/environment/
     volumes:
