@@ -6,7 +6,7 @@ services:
     hostname: 'gitlab.example.com'
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'http://0.0.0.0:8081'
+        external_url 'http://10.5.0.2:8081'
     volumes:
       - gl-home:/etc/gitlab
       - gl-logs:/var/log/gitlab
@@ -17,15 +17,16 @@ services:
       - 433:443
     shm_size: '256m'
     networks:
-      - gl-network
-
+      gl-network:
+        ipv4_address: 10.5.0.2
   gl-runner:
     image: gitlab/gitlab-runner
     volumes:
       - ./runner-config-1:/etc/gitlab-runner
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - gl-network
+      gl-network:
+        ipv4_address: 10.5.0.3
     depends_on:
       - gl
   gl-runner-2:
@@ -34,9 +35,30 @@ services:
       - ./runner-config-2:/etc/gitlab-runner
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - gl-network
+      gl-network:
+        ipv4_address: 10.5.0.4
     depends_on:
       - gl
+  docs:
+    build:
+      context: ./environment/docs
+    volumes:
+      - ./docs:/srv/www
+    networks:
+      - gl-network:
+    ports:
+      - 127.0.0.1:8080:8080
+  cypress:
+    depends_on:
+      - gl
+      - gl_runner-1
+      - gl_runner-2
+    build:
+      context: ./cypress/environment/
+    volumes:
+      - ./cypress/reports:/opt/reports
+      - ./cypress/screenshots:/opt/screenshots
+      - ./cypress/videos:/opt/videos
 
 volumes:
   gl-home:
@@ -44,5 +66,8 @@ volumes:
   gl-data:
 
 networks:
-  gl-network: 
-    driver: bridge
+  gl-network:
+    ipam:
+      config:
+        - subnet : 10.5.0.0/24
+          gateway: 10.5.0.1
